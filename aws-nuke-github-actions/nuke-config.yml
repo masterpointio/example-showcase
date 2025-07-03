@@ -1,0 +1,101 @@
+###
+### THIS FILE IS FORKED FROM https://aws-nuke.ekristen.dev/starter-config/
+###
+
+regions:
+  - all
+
+settings:
+  EC2Image:
+    IncludeDisabled: true
+    IncludeDeprecated: true
+    DisableDeregistrationProtection: true
+  EC2Instance:
+    DisableStopProtection: true
+    DisableDeletionProtection: true
+  RDSInstance:
+    DisableDeletionProtection: true
+  CloudFormationStack:
+    DisableDeletionProtection: true
+  DynamoDBTable:
+    DisableDeletionProtection: true
+
+resource-types:
+  excludes:
+    - BudgetsBudget
+    # We don't want to delete the permission set from the SAML provider. If this is done accidentally, go to the account for AWS Organization and reconfigure the permission set to apply it on the account.
+    - IAMSAMLProvider
+    - IAMRolePolicyAttachment
+    # Account network related resources that doesn't have a "name" or "tag" property.
+    - EC2DHCPOption
+    - EC2NetworkInterface
+    - EC2InternetGatewayAttachment
+    # FROM THE FORKED CONFIGS
+    - S3Object # Excluded because S3 bucket removal handles removing all S3Objects
+    - ServiceCatalogTagOption # Excluded due to https://github.com/rebuy-de/aws-nuke/issues/515
+    - ServiceCatalogTagOptionPortfolioAttachment # Excluded due to https://github.com/rebuy-de/aws-nuke/issues/515
+    - FMSNotificationChannel # Excluded because it's not available
+    - FMSPolicy # Excluded because it's not available
+    - MachineLearningMLModel # Excluded due to ML being unavailable
+    - MachineLearningDataSource # Excluded due to ML being unavailable
+    - MachineLearningBranchPrediction # Excluded due to ML being unavailable
+    - MachineLearningEvaluation # Excluded due to ML being unavailable
+    - RoboMakerDeploymentJob # Deprecated Service
+    - RoboMakerFleet # Deprecated Service
+    - RoboMakerRobot # Deprecated Service
+    - RoboMakerSimulationJob
+    - RoboMakerRobotApplication
+    - RoboMakerSimulationApplication
+    - OpsWorksApp # Deprecated service
+    - OpsWorksInstance # Deprecated service
+    - OpsWorksLayer # Deprecated service
+    - OpsWorksUserProfile # Deprecated service
+    - OpsWorksCMBackup # Deprecated service
+    - OpsWorksCMServer # Deprecated service
+    - OpsWorksCMServerState # Deprecated service
+    - CodeStarProject # Deprecated service
+    - CodeStarConnection # Deprecated service
+    - CodeStarNotification # Deprecated service
+    - Cloud9Environment # Deprecated service
+    - CloudSearchDomain # Deprecated service
+    - ElasticTranscoderPipeline # Deprecated service
+    - ElasticTranscoderPreset # Deprecated service
+    - RedshiftServerlessSnapshot # Deprecated service
+    - RedshiftServerlessNamespace # Deprecated service
+    - RedshiftServerlessWorkgroup # Deprecated service
+
+presets:
+  sso-protect:
+    filters:
+      IAMSAMLProvider:
+        - type: regex
+          value: AWSSSO_.*_DO_NOT_DELETE
+      IAMRole:
+        - type: glob
+          value: AWSReservedSSO_*
+      IAMRolePolicyAttachment:
+        - type: glob
+          value: AWSReservedSSO_*
+  nuke-protection-tag:
+    filters:
+      __global__:
+        - property: tag:ProtectFromNuke
+          value: "true"
+        - property: Name
+          type: contains
+          value: no-nuke
+      EC2Volume: # These are created automatically with EC2 instances. They have no tag or name.
+        - property: State
+          value: in-use
+
+accounts:
+  "YOUR_AWS_ACCOUNT_ID":
+    presets:
+      - sso-protect
+      - nuke-protection-tag
+
+bypass-alias-check-accounts: # Skip the double confirmation needed to nuke the account
+  - "YOUR_AWS_ACCOUNT_ID"
+
+blocklist: # Required field. Not necessarily used since we only nuke the `masterpoint-testing` account.
+  - ""

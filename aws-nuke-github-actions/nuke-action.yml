@@ -1,0 +1,38 @@
+name: "[AWS - MP Testing] AWS Nuke Cleanup"
+
+on:
+  workflow_dispatch: {}          # Allow manual trigger
+  schedule:
+    - cron: '0 0 * * *'        # Every day at midnight
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  aws_nuke:
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/ekristen/aws-nuke:latest   # Pin a specific tag/digest if needed
+      options: --user root
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Configure AWS Credentials on `YOUR-ACCOUNT` AWS Account
+        uses: aws-actions/configure-aws-credentials@ececac1a45f3b08a01d2dd070d28d111c5fe6722 # v4.1.0
+        with:
+          role-to-assume: arn:aws:iam::YOUR_AWS_ACCOUNT_ID:role/YOUR_ROLE_NAME
+          role-session-name: GitHubActionsOIDC
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run aws-nuke
+        run: |
+          aws-nuke \
+            -c nuke-config.yaml \
+            --no-dry-run --no-alias-check --no-prompt
